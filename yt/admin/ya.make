@@ -1,4 +1,4 @@
-       
+
 RECURSE(
     dashboard_generator
     dashboards
