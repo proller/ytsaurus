@@ -175,6 +175,24 @@ public:
         return DoCreate(TVersionedNodeId(id), context);
     }
 
+    void SetReachable(TCypressNode* node) override
+    {
+        YT_VERIFY(!node->GetReachable());
+        node->SetReachable(true);
+
+        auto* typedNode = node->As<TImpl>();
+        DoSetReachable(typedNode);
+    }
+
+    void SetUnreachable(TCypressNode* node) override
+    {
+        YT_VERIFY(node->GetReachable());
+        node->SetReachable(false);
+
+        auto* typedNode = node->As<TImpl>();
+        DoSetUnreachable(typedNode);
+    }
+
     void Zombify(TCypressNode* node) override
     {
         auto* typedNode = node->As<TImpl>();
@@ -373,6 +391,12 @@ protected:
 
         return nodeHolder;
     }
+
+    virtual void DoSetReachable(TImpl* /*node*/)
+    { }
+
+    virtual void DoSetUnreachable(TImpl* /*node*/)
+    { }
 
     virtual void DoZombify(TImpl* /*node*/)
     { }
@@ -836,7 +860,7 @@ class TMapNodeChildren
     static void MaybeVerifyIsTrunk(TNonOwnedChild child);
 
 public:
-    constexpr static bool ChildIsPointer = std::is_pointer_v<TNonOwnedChild>;
+    static constexpr bool ChildIsPointer = std::is_pointer_v<TNonOwnedChild>;
     using TKeyToChild = THashMap<TString, TNonOwnedChild>;
     using TChildToKey = THashMap<TMaybeOwnedChild, TString>;
 

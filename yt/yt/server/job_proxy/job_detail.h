@@ -30,7 +30,7 @@ public:
     void PopulateInputNodeDirectory() const override;
 
     std::vector<NChunkClient::TChunkId> DumpInputContext(NTransactionClient::TTransactionId transactionId) override;
-    TString GetStderr() override;
+    NApi::TGetJobStderrResponse GetStderr(const NApi::TGetJobStderrOptions& options = {}) override;
     std::optional<TString> GetFailContext() override;
     std::vector<NJobAgent::TJobProfile> GetProfiles() override;
     const NControllerAgent::TCoreInfos& GetCoreInfos() const override;
@@ -42,6 +42,7 @@ public:
     i64 GetStderrSize() const override;
     TSharedRef DumpSensors() override;
     std::optional<TJobEnvironmentCpuStatistics> GetUserJobCpuStatistics() const override;
+    bool HasInputStatistics() const override;
 
 protected:
     const IJobHostPtr Host_;

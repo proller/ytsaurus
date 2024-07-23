@@ -737,6 +737,10 @@ void TJob::OnJobFinalized()
     FillTrafficStatistics(ExecAgentTrafficStatisticsPrefix, statistics, TrafficMeter_);
     StatisticsYson_ = ConvertToYsonString(statistics);
 
+    // NB(eshcherbin): We need to destroy this producer, otherwise it will continue
+    // to send metrics for some time after the job is finished.
+    UserJobSensorProducer_.Reset();
+
     JobFinished_.Fire(MakeStrong(this));
 
     HandleJobReport(MakeDefaultJobReport()
@@ -1262,12 +1266,12 @@ std::vector<TChunkId> TJob::DumpInputContext(TTransactionId transactionId)
     }
 }
 
-std::optional<TString> TJob::GetStderr()
+std::optional<TGetJobStderrResponse> TJob::GetStderr(const TGetJobStderrOptions& options)
 {
     VERIFY_THREAD_AFFINITY(JobThread);
 
     if (Stderr_) {
-        return *Stderr_;
+        return TGetJobStderrResponse::MakeJobStderr(TSharedRef::FromString(*Stderr_), options);
     }
 
     if (!UserJobSpec_) {
@@ -1276,7 +1280,7 @@ std::optional<TString> TJob::GetStderr()
 
     if (JobPhase_ == EJobPhase::Running) {
         try {
-            return GetJobProbeOrThrow()->GetStderr();
+            return GetJobProbeOrThrow()->GetStderr(options);
         } catch (const std::exception& ex) {
             THROW_ERROR_EXCEPTION("Error requesting stderr from job proxy")
                 << ex;
@@ -1370,12 +1374,12 @@ void TJob::ReportStderr()
 {
     VERIFY_THREAD_AFFINITY(JobThread);
 
-    auto maybeStderr = GetStderr();
+    auto maybeStderr = GetStderr({});
     if (!maybeStderr) {
         return;
     }
     HandleJobReport(TNodeJobReport()
-        .Stderr(std::move(*maybeStderr)));
+        .Stderr(TString{maybeStderr->Data.ToStringBuf()}));
 }
 
 void TJob::ReportFailContext()

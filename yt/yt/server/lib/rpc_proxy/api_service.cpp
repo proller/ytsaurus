@@ -635,11 +635,11 @@ public:
             config->TestingOptions
             ? config->TestingOptions->HeapProfiler
             : nullptr)
+        , LookupMemoryTracker_(WithCategory(memoryTracker, EMemoryCategory::Lookup))
         , SelectConsumeDataWeight_(Profiler_.Counter("/select_consume/data_weight"))
         , SelectConsumeRowCount_(Profiler_.Counter("/select_consume/row_count"))
         , SelectOutputDataWeight_(Profiler_.Counter("/select_output/data_weight"))
         , SelectOutputRowCount_(Profiler_.Counter("/select_output/row_count"))
-        , LookupMemoryTracker_(WithCategory(memoryTracker, EMemoryCategory::Lookup))
     {
         RegisterMethod(RPC_SERVICE_METHOD_DESC(GenerateTimestamps));
 
@@ -849,6 +849,7 @@ private:
     const NNative::TClientCachePtr AuthenticatedClientCache_;
     const IInvokerPtr ControlInvoker_;
     const THeapProfilerTestingOptionsPtr HeapProfilerTestingOptions_;
+    const IMemoryUsageTrackerPtr LookupMemoryTracker_;
 
     static const TStructuredLoggingMethodDynamicConfigPtr DefaultMethodConfig;
 
@@ -858,7 +859,6 @@ private:
     TCounter SelectOutputDataWeight_;
     TCounter SelectOutputRowCount_;
 
-    const IMemoryUsageTrackerPtr LookupMemoryTracker_;
 
     struct TDetailedProfilingCountersKey
     {
@@ -3186,9 +3186,12 @@ private:
         TGetJobStderrOptions options;
         SetTimeoutOptions(&options, context.Get());
 
-        context->SetRequestInfo("OperationIdOrAlias: %v, JobId: %v",
+        context->SetRequestInfo("OperationIdOrAlias: %v, JobId: %v, Limit: %v, Offset: %v",
             operationIdOrAlias,
-            jobId);
+            jobId,
+            options.Limit,
+            options.Offset
+        );
 
         ExecuteCall(
             context,
@@ -3197,7 +3200,10 @@ private:
             },
             [] (const auto& context, const auto& result) {
                 auto* response = &context->Response();
-                response->Attachments().push_back(std::move(result));
+                context->SetResponseInfo("Size: %v, TotalSize: %v, EndOffset: %v", result.Data.size(), result.TotalSize, result.EndOffset);
+                response->set_total_size(result.TotalSize);
+                response->set_end_offset(result.EndOffset);
+                response->Attachments().push_back(result.Data);
             });
     }
 
@@ -3904,7 +3910,7 @@ private:
                 ToProto(response->mutable_replication_progress(), result.ReplicationProgress);
 
                 for (auto [tabletId, rowIndex] : result.EndReplicationRowIndexes) {
-                    auto *protoReplicationRowIndex = response->add_end_replication_row_indexes();
+                    auto* protoReplicationRowIndex = response->add_end_replication_row_indexes();
                     ToProto(protoReplicationRowIndex->mutable_tablet_id(), tabletId);
                     protoReplicationRowIndex->set_row_index(rowIndex);
                 }

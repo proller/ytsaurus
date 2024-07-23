@@ -481,6 +481,12 @@ void TSortOperationOptionsBase::Register(TRegistrar registrar)
         .GreaterThan(0.0);
 }
 
+void TSortOperationOptions::Register(TRegistrar registrar)
+{
+    registrar.Parameter("enable_simple_sort_for_evaluated_output", &TThis::EnableSimpleSortForEvaluatedOutput)
+        .Default(false);
+}
+
 void TRemoteCopyOperationOptions::Register(TRegistrar registrar)
 {
     registrar.Parameter("cpu_limit", &TThis::CpuLimit)
@@ -1156,6 +1162,9 @@ void TControllerAgentConfig::Register(TRegistrar registrar)
 
     registrar.Parameter("disallow_remote_operations", &TThis::DisallowRemoteOperations)
         .DefaultNew();
+
+    registrar.Parameter("enable_merge_schemas_during_schema_infer", &TThis::EnableMergeSchemasDuringSchemaInfer)
+        .Default(false);
 
     registrar.Preprocessor([&] (TControllerAgentConfig* config) {
         config->ChunkLocationThrottler->Limit = 10'000;

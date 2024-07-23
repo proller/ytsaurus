@@ -214,10 +214,10 @@ std::vector<NChunkClient::TChunkId> TJobProxy::DumpInputContext(TTransactionId t
     return job->DumpInputContext(transactionId);
 }
 
-TString TJobProxy::GetStderr()
+TGetJobStderrResponse TJobProxy::GetStderr(const TGetJobStderrOptions& options)
 {
     auto job = GetJobOrThrow();
-    return job->GetStderr();
+    return job->GetStderr(options);
 }
 
 TPollJobShellResponse TJobProxy::PollJobShell(
@@ -883,6 +883,7 @@ TJobResult TJobProxy::RunJob()
                 this,
                 jobSpecExt.user_job_spec(),
                 JobId_,
+                GetJobSpecHelper()->GetJobType(),
                 Ports_,
                 std::make_unique<TUserJobWriteController>(this));
         } else {
@@ -972,12 +973,12 @@ void TJobProxy::ReportResult(
         }
 
         try {
-            auto stderr = GetStderr();
-            if (!std::empty(stderr)) {
+            auto stderr = GetStderr({});
+            if (!stderr.Data.empty()) {
                 const auto& jobResultExt = result.GetExtension(TJobResultExt::job_result_ext);
                 YT_VERIFY(jobResultExt.has_stderr());
             }
-            req->set_job_stderr(std::move(stderr));
+            req->set_job_stderr(TString{stderr.Data.ToStringBuf()});
         } catch (const std::exception& ex) {
             YT_LOG_WARNING(ex, "Failed to get job stderr on teardown");
         }
@@ -1015,7 +1016,9 @@ TStatistics TJobProxy::GetEnrichedStatistics() const
         auto extendedStatistics = job->GetStatistics();
         statistics = std::move(extendedStatistics.Statstics);
 
-        statistics.AddSample("/data/input", extendedStatistics.TotalInputStatistics.DataStatistics);
+        if (job->HasInputStatistics()) {
+            statistics.AddSample("/data/input", extendedStatistics.TotalInputStatistics.DataStatistics);
+        }
         DumpCodecStatistics(extendedStatistics.TotalInputStatistics.CodecStatistics, "/codec/cpu/decode", &statistics);
         for (int index = 0; index < std::min<int>(statisticsOutputTableCountLimit, extendedStatistics.OutputStatistics.size()); ++index) {
             auto ypathIndex = ToYPathLiteral(index);
@@ -1033,7 +1036,9 @@ TStatistics TJobProxy::GetEnrichedStatistics() const
                 statistics.AddSample(path + "/bytes", pipeStatistics.Bytes);
             };
 
-            dumpPipeStatistics("/user_job/pipes/input", pipeStatistics->InputPipeStatistics);
+            if (job->HasInputStatistics()) {
+                dumpPipeStatistics("/user_job/pipes/input", *pipeStatistics->InputPipeStatistics);
+            }
             dumpPipeStatistics("/user_job/pipes/output/total", pipeStatistics->TotalOutputPipeStatistics);
             for (int index = 0; index < std::min<int>(statisticsOutputTableCountLimit, pipeStatistics->OutputPipeStatistics.size()); ++index) {
                 dumpPipeStatistics("/user_job/pipes/output/" + ToYPathLiteral(index), pipeStatistics->OutputPipeStatistics[index]);

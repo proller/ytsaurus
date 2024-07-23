@@ -100,6 +100,7 @@
     XX(ChunkWriter, chunk_writer) \
     XX(ClusterConnection, cluster_connection) \
     XX(ClusterName, cluster_name) \
+    XX(CollocatedReplicationCardIds, collocated_replication_card_ids) \
     XX(CommitOrdering, commit_ordering) \
     XX(CommittedResourceUsage, committed_resource_usage) \
     XX(CompressedDataSize, compressed_data_size) \
@@ -416,6 +417,7 @@
     XX(QuorumRowCount, quorum_row_count) \
     XX(Rack, rack) \
     XX(Racks, racks) \
+    XX(Reachable, reachable) \
     XX(ReadQuorum, read_quorum) \
     XX(ReadRequestRateLimit, read_request_rate_limit) \
     XX(RecursiveCommittedResourceUsage, recursive_committed_resource_usage) \
@@ -577,6 +579,7 @@
     XX(Version, version) \
     XX(VersionedResourceUsage, versioned_resource_usage) \
     XX(ViolatedResourceLimits, violated_resource_limits) \
+    XX(Virtual, virtual) \
     XX(Vital, vital) \
     XX(VitalQueueConsumer, vital_queue_consumer) \
     XX(Weight, weight) \

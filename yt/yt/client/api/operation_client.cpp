@@ -227,5 +227,56 @@ void TListOperationsAccessFilter::Register(TRegistrar registrar)
 
 ////////////////////////////////////////////////////////////////////////////////
 
+TGetJobStderrResponse TGetJobStderrResponse::MakeJobStderr(const TSharedRef& data, const TGetJobStderrOptions& options)
+{
+    auto totalSize = std::ssize(data);
+    auto endOffset = totalSize;
+    auto offset = options.Offset.value_or(0);
+    auto limit = options.Limit.value_or(0);
+
+    if (!offset && !limit) {
+        return {
+            .Data = data,
+            .TotalSize = totalSize,
+            .EndOffset = endOffset,
+        };
+    };
+
+    size_t firstPos = 0;
+    if (offset >= 0) {
+        firstPos = offset;
+    } else if (-offset > static_cast<i64>(data.size())) {
+        firstPos = 0;
+    } else {
+        firstPos = data.size() + offset;
+    }
+
+    if (firstPos >= data.size()) {
+        return {
+            .Data = {},
+            .TotalSize = totalSize,
+            .EndOffset = 0,
+        };
+    } else {
+        auto lastPos = firstPos;
+        if (limit > 0) {
+            lastPos += limit;
+        } else {
+            lastPos += data.size();
+        }
+        if (lastPos > data.size()) {
+            lastPos = data.size();
+        }
+        const auto dataCut = data.Slice(firstPos, lastPos);
+        return {
+            .Data = dataCut,
+            .TotalSize = totalSize,
+            .EndOffset = limit ? static_cast<i64>(firstPos + dataCut.size()) : endOffset,
+        };
+    }
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
 } // namespace NYT::NApi
 

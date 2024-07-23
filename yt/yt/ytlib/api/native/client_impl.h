@@ -590,7 +590,7 @@ public: \
         NScheduler::TJobId jobId,
         const TGetJobSpecOptions& options),
         (jobId, options))
-    IMPLEMENT_METHOD(TSharedRef, GetJobStderr, (
+    IMPLEMENT_METHOD(TGetJobStderrResponse, GetJobStderr, (
         const NScheduler::TOperationIdOrAlias& operationIdOrAlias,
         NScheduler::TJobId jobId,
         const TGetJobStderrOptions& options),
@@ -914,6 +914,10 @@ private:
 
     const std::vector<ITypeHandlerPtr> TypeHandlers_;
 
+    const IMemoryUsageTrackerPtr LookupMemoryTracker_;
+    const IMemoryUsageTrackerPtr QueryMemoryTracker_;
+    const NQueryClient::TMemoryProviderMapByTagPtr MemoryProvider_ = New<NQueryClient::TMemoryProviderMapByTag>();
+
     using TChannels = THashMap<NObjectClient::TCellTag, NRpc::IChannelPtr>;
     YT_DECLARE_SPIN_LOCK(NThreading::TReaderWriterSpinLock, MasterChannelsLock_);
     TEnumIndexedArray<EMasterChannelKind, TChannels> MasterChannels_;
@@ -928,9 +932,6 @@ private:
     TLazyIntrusivePtr<NQueryClient::IFunctionRegistry> FunctionRegistry_;
     std::unique_ptr<NScheduler::TOperationServiceProxy> SchedulerOperationProxy_;
     std::unique_ptr<NBundleController::TBundleControllerServiceProxy> BundleControllerProxy_;
-    const IMemoryUsageTrackerPtr LookupMemoryTracker_;
-    const IMemoryUsageTrackerPtr QueryMemoryTracker_;
-    const NQueryClient::TMemoryProviderMapByTagPtr MemoryProvider_ = New<NQueryClient::TMemoryProviderMapByTag>();
 
     struct TReplicaClient final
     {
@@ -1339,9 +1340,10 @@ private:
         NApi::EJobSpecSource specSource,
         NYTree::EPermissionSet requiredPermissions);
 
-    TSharedRef DoGetJobStderrFromNode(
+    std::optional<TGetJobStderrResponse> DoGetJobStderrFromNode(
         NScheduler::TOperationId operationId,
-        NScheduler::TJobId jobId);
+        NScheduler::TJobId jobId,
+        const TGetJobStderrOptions& options);
     TSharedRef DoGetJobStderrFromArchive(
         NScheduler::TOperationId operationId,
         NScheduler::TJobId jobId);
